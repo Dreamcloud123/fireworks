@@ -70,15 +70,14 @@
                 this.lastY = y;
                 this.color = color;
                 
-                // --- 适配你的调试数据 ---
                 const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 2 + 2; // 调试数据
+                const speed = Math.random() * 2 + 2;
                 
                 this.vx = Math.cos(angle) * speed;
                 this.vy = Math.sin(angle) * speed;
 
-                this.gravity = 0.05;   // 调试数据
-                this.friction = 1;      // 调试数据
+                this.gravity = 0.05;
+                this.friction = 1;
                 this.alpha = 1;
             }
 
@@ -90,37 +89,31 @@
                 this.vy += this.gravity;
                 this.x += this.vx;
                 this.y += this.vy;
-                this.alpha -= 0.015; // 调试数据
+                this.alpha -= 0.015;
             }
 
             draw() {
                 if (this.alpha <= 0) return;
 
                 ctx.save();
-                // 使用 lighter 混合模式实现炸裂亮光，不耗性能
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.globalAlpha = this.alpha;
-
-                // 1. 绘制色彩光晕 (对应你调试的粗线条)
                 ctx.beginPath();
                 ctx.moveTo(this.lastX, this.lastY);
-                ctx.lineTo(this.x, this.y);
-        
+                ctx.lineTo(this.x, this.y);        
                 ctx.strokeStyle = this.color;
-
-                ctx.lineWidth = 7; // 调试数据：粗轨迹
+                ctx.lineWidth = 7; 
                 ctx.lineCap = 'round';
                 ctx.stroke();
 
-                // 2. 绘制核心白光 (增强炸裂感)
                 if (this.alpha > 0.6) {
                     ctx.beginPath();
                     ctx.moveTo(this.lastX, this.lastY);
                     ctx.lineTo(this.x, this.y);
-                    const coreLightness = 90; // 极高亮度
-                    const coreSaturation = 30; // 低饱和度
+                    const coreLightness = 90;
+                    const coreSaturation = 30;
                     ctx.strokeStyle = `hsl(${this.hue}, ${coreSaturation}%, ${coreLightness}%)`;
-                    ctx.lineWidth = 2; // 核心白线
+                    ctx.lineWidth = 2;
                     ctx.stroke();
                 }
 
