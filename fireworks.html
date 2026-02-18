@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>随机烟花绽放效果 - 调试适配版</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: "PingFang SC", sans-serif;
+        }
+
+        #firework-btn {
+            position: absolute;
+            bottom: 50px;
+            padding: 12px 35px;
+            font-size: 18px;
+            background: transparent;
+            color: #ffc107;
+            border: 2px solid #ffc107;
+            border-radius: 30px;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px rgba(255, 193, 7, 0.2);
+        }
+
+        #firework-btn:hover {
+            background: #ffc107;
+            color: #000;
+            box-shadow: 0 0 25px rgba(255, 193, 7, 0.5);
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="firework-btn">放烟花</button>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const btn = document.getElementById('firework-btn');
+
+        let particles = [];
+        let rockets = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.lastX = x;
+                this.lastY = y;
+                this.color = color;
+                
+                // --- 适配你的调试数据 ---
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 2 + 2; // 调试数据
+                
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+
+                this.gravity = 0.05;   // 调试数据
+                this.friction = 1;      // 调试数据
+                this.alpha = 1;
+            }
+
+            update() {
+                this.lastX = this.x;
+                this.lastY = this.y;
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+                this.vy += this.gravity;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= 0.015; // 调试数据
+            }
+
+            draw() {
+                if (this.alpha <= 0) return;
+
+                ctx.save();
+                // 使用 lighter 混合模式实现炸裂亮光，不耗性能
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.globalAlpha = this.alpha;
+
+                // 1. 绘制色彩光晕 (对应你调试的粗线条)
+                ctx.beginPath();
+                ctx.moveTo(this.lastX, this.lastY);
+                ctx.lineTo(this.x, this.y);
+        
+                ctx.strokeStyle = this.color;
+
+                ctx.lineWidth = 7; // 调试数据：粗轨迹
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                // 2. 绘制核心白光 (增强炸裂感)
+                if (this.alpha > 0.6) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.lastX, this.lastY);
+                    ctx.lineTo(this.x, this.y);
+                    const coreLightness = 90; // 极高亮度
+                    const coreSaturation = 30; // 低饱和度
+                    ctx.strokeStyle = `hsl(${this.hue}, ${coreSaturation}%, ${coreLightness}%)`;
+                    ctx.lineWidth = 2; // 核心白线
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        class Rocket {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height;
+                this.targetY = Math.random() * (canvas.height * 0.4) + 100;
+                this.vy = -(Math.random() * 6 + 7);
+                this.color = `hsl(${Math.random() * 360}, 100%, 65%)`;
+                this.exploded = false;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = "white";
+                ctx.fill();
+            }
+
+            update() {
+                this.y += this.vy;
+                if (this.y <= this.targetY) {
+                    this.exploded = true;
+                    this.explode();
+                }
+            }
+
+            explode() {
+                const particleCount = 80;
+                for (let i = 0; i < particleCount; i++) {
+                    particles.push(new Particle(this.x, this.y, this.color));
+                }
+            }
+        }
+
+        function loop() {
+            ctx.globalAlpha = 0.18;
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = 1;
+
+            rockets.forEach((rocket, index) => {
+                rocket.draw();
+                rocket.update();
+                if (rocket.exploded) rockets.splice(index, 1);
+            });
+
+            particles.forEach((particle, index) => {
+                particle.draw();
+                particle.update();
+                if (particle.alpha <= 0) particles.splice(index, 1);
+            });
+
+            requestAnimationFrame(loop);
+        }
+
+        btn.onclick = () => {
+            const count = Math.floor(Math.random() * 5) + 1; 
+            for(let i = 0; i < count; i++) {
+                const delay = i * (Math.random() * 400 + 100); 
+                setTimeout(() => {
+                    rockets.push(new Rocket());
+                }, delay);
+            }
+        };
+
+        loop();
+    </script>
+</body>
+</html>
