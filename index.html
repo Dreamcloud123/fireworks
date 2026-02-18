@@ -2,44 +2,38 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>赛博放烟花</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>手机优化版随机烟花</title>
     <style>
         body {
-            margin: 0;
-            padding: 0;
-            background-color: #050505;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: "PingFang SC", sans-serif;
+            margin: 0; padding: 0; background-color: #050505; overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; font-family: sans-serif;
+            -webkit-touch-callout: none; 
+            user-select: none;
         }
 
         #firework-btn {
-            position: absolute;
-            bottom: 50px;
-            padding: 12px 35px;
-            font-size: 18px;
-            background: transparent;
-            color: #ffc107;
-            border: 2px solid #ffc107;
-            border-radius: 30px;
-            cursor: pointer;
-            z-index: 100;
-            transition: all 0.3s;
-            box-shadow: 0 0 10px rgba(255, 193, 7, 0.2);
+            position: absolute; bottom: 50px; padding: 12px 35px;
+            font-size: 18px; background: transparent; color: #ffc107;
+            border: 2px solid #ffc107; border-radius: 30px;
+            cursor: pointer; z-index: 100; transition: all 0.2s;
+            outline: none; -webkit-tap-highlight-color: transparent;
         }
 
-        #firework-btn:hover {
-            background: #ffc107;
-            color: #000;
-            box-shadow: 0 0 25px rgba(255, 193, 7, 0.5);
+        @media (hover: hover) {
+            #firework-btn:hover {
+                background: #ffc107; color: #000;
+                box-shadow: 0 0 25px rgba(255, 193, 7, 0.5);
+            }
         }
 
-        canvas {
-            display: block;
+        #firework-btn:active {
+            background: #ffc107; color: #000;
+            transform: scale(0.95);
         }
+
+        canvas { display: block; }
     </style>
 </head>
 <body>
@@ -55,6 +49,34 @@
         let particles = [];
         let rockets = [];
 
+        const AUDIO_POOL_SIZE = 10;
+        const rocketPool = Array.from({length: 5}, () => new Audio('./rocket.MP3'));
+        const blastPool = Array.from({length: AUDIO_POOL_SIZE}, () => new Audio('./explode.MP3'));
+        let rocketIdx = 0;
+        let blastIdx = 0;
+
+        rocketPool.forEach(a => a.volume = 0.15); 
+
+        function playRocketSound() {
+            const sound = rocketPool[rocketIdx];
+            sound.currentTime = 0;
+            sound.play().catch(()=>{});
+            rocketIdx = (rocketIdx + 1) % rocketPool.length;
+            return sound;
+        }
+
+        function playBlastSound(x, y) {
+            const sound = blastPool[blastIdx];
+            
+            const distanceFactor = y / canvas.height; 
+            let vol = (1 - distanceFactor) * 0.4 + 0.2;
+            
+            sound.volume = Math.max(0, Math.min(1, vol));
+            sound.currentTime = 0;
+            sound.play().catch(()=>{});
+            blastIdx = (blastIdx + 1) % blastPool.length;
+        }
+
         function resize() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -62,73 +84,50 @@
         window.addEventListener('resize', resize);
         resize();
 
-        const rocketSound = new Audio('./rocket.MP3');
-        function playBlastSound(x, y) {
-            const explode = new Audio('./explode.MP3');
-            const distanceFactor = y / canvas.height; 
-            let volume = (1 - distanceFactor) * 0.5 + 0.1;
-
-            const horizontalCentering = 1 - Math.abs(x - canvas.width / 2) / (canvas.width / 2);
-            volume *= (0.8 + 0.2 * horizontalCentering);
-            explode.volume = Math.max(0, Math.min(1, volume)); 
-            explode.play();
-        }
-
         class Particle {
             constructor(x, y, color) {
-                this.x = x;
-                this.y = y;
-                this.lastX = x;
-                this.lastY = y;
+                this.x = x; this.y = y; this.lastX = x; this.lastY = y;
                 this.color = color;
-                
                 const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 2 + 2;
-                
+                const speed = Math.random() * 2 + 2; 
                 this.vx = Math.cos(angle) * speed;
                 this.vy = Math.sin(angle) * speed;
-
-                this.gravity = 0.05;
-                this.friction = 1;
-                this.alpha = 1;
+                this.gravity = 0.05; this.friction = 1; this.alpha = 1;
+                
+                const colorMatch = color.match(/\d+/g);
+                this.hue = colorMatch ? colorMatch[0] : 0;
             }
 
             update() {
-                this.lastX = this.x;
-                this.lastY = this.y;
-                this.vx *= this.friction;
-                this.vy *= this.friction;
+                this.lastX = this.x; this.lastY = this.y;
+                this.vx *= this.friction; this.vy *= this.friction;
                 this.vy += this.gravity;
-                this.x += this.vx;
-                this.y += this.vy;
+                this.x += this.vx; this.y += this.vy;
                 this.alpha -= 0.015;
             }
 
             draw() {
                 if (this.alpha <= 0) return;
-
                 ctx.save();
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.globalAlpha = this.alpha;
+
                 ctx.beginPath();
                 ctx.moveTo(this.lastX, this.lastY);
-                ctx.lineTo(this.x, this.y);        
+                ctx.lineTo(this.x, this.y);
                 ctx.strokeStyle = this.color;
-                ctx.lineWidth = 7; 
+                ctx.lineWidth = 7;
                 ctx.lineCap = 'round';
                 ctx.stroke();
 
-                if (this.alpha > 0.6) {
+                if (this.alpha > 0.3) {
                     ctx.beginPath();
                     ctx.moveTo(this.lastX, this.lastY);
                     ctx.lineTo(this.x, this.y);
-                    const coreLightness = 80;
-                    const coreSaturation = 40;
-                    ctx.strokeStyle = `hsl(${this.hue}, ${coreSaturation}%, ${coreLightness}%)`;
+                    ctx.strokeStyle = `hsl(${this.hue}, 30%, 90%)`;
                     ctx.lineWidth = 2;
                     ctx.stroke();
                 }
-
                 ctx.restore();
             }
         }
@@ -141,15 +140,12 @@
                 this.vy = -(Math.random() * 3 + 7);
                 this.color = `hsl(${Math.random() * 360}, 100%, 65%)`;
                 this.exploded = false;
-
-                const s = rocketSound.cloneNode();
-                s.volume = 0.2;
-                s.play();
+                this.soundInstance = playRocketSound();
             }
 
             draw() {
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
                 ctx.fillStyle = "white";
                 ctx.fill();
             }
@@ -158,36 +154,36 @@
                 this.y += this.vy;
                 if (this.y <= this.targetY) {
                     this.exploded = true;
+                    if(this.soundInstance) {
+                        this.soundInstance.pause();
+                        this.soundInstance.currentTime = 0;
+                    }
                     this.explode();
                 }
             }
 
             explode() {
                 playBlastSound(this.x, this.y);
-
-                const particleCount = 80;
-                for (let i = 0; i < particleCount; i++) {
+                for (let i = 0; i < 80; i++) {
                     particles.push(new Particle(this.x, this.y, this.color));
                 }
             }
         }
 
         function loop() {
-            ctx.globalAlpha = 0.18;
+            ctx.globalAlpha = 0.2;
             ctx.fillStyle = '#050505';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.globalAlpha = 1;
 
-            rockets.forEach((rocket, index) => {
-                rocket.draw();
-                rocket.update();
-                if (rocket.exploded) rockets.splice(index, 1);
+            rockets.forEach((r, i) => {
+                r.draw(); r.update();
+                if (r.exploded) rockets.splice(i, 1);
             });
 
-            particles.forEach((particle, index) => {
-                particle.draw();
-                particle.update();
-                if (particle.alpha <= 0) particles.splice(index, 1);
+            particles.forEach((p, i) => {
+                p.draw(); p.update();
+                if (p.alpha <= 0) particles.splice(i, 1);
             });
 
             requestAnimationFrame(loop);
@@ -196,10 +192,9 @@
         btn.onclick = () => {
             const count = Math.floor(Math.random() * 5) + 1; 
             for(let i = 0; i < count; i++) {
-                const delay = i * (Math.random() * 400 + 100); 
                 setTimeout(() => {
                     rockets.push(new Rocket());
-                }, delay);
+                }, i * (Math.random() * 400 + 100));
             }
         };
 
