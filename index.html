@@ -62,9 +62,9 @@
         window.addEventListener('resize', resize);
         resize();
 
-        const rocketSound = new Audio('rocket.mp3');
+        const rocketSound = new Audio('./rocket.MP3');
         function playBlastSound(x, y) {
-            const explode = new Audio('explode.mp3');
+            const explode = new Audio('./explode.MP3');
             const distanceFactor = y / canvas.height; 
             let volume = (1 - distanceFactor) * 0.5 + 0.1;
 
