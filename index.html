@@ -62,6 +62,18 @@
         window.addEventListener('resize', resize);
         resize();
 
+        const rocketSound = new Audio('rocket.mp3');
+        function playBlastSound(x, y) {
+            const explode = new Audio('explode.mp3');
+            const distanceFactor = y / canvas.height; 
+            let volume = (1 - distanceFactor) * 0.5 + 0.1;
+
+            const horizontalCentering = 1 - Math.abs(x - canvas.width / 2) / (canvas.width / 2);
+            volume *= (0.8 + 0.2 * horizontalCentering);
+            explode.volume = Math.max(0, Math.min(1, volume)); 
+            explode.play();
+        }
+
         class Particle {
             constructor(x, y, color) {
                 this.x = x;
@@ -126,9 +138,13 @@
                 this.x = Math.random() * canvas.width;
                 this.y = canvas.height;
                 this.targetY = Math.random() * (canvas.height * 0.4) + 100;
-                this.vy = -(Math.random() * 6 + 7);
+                this.vy = -(Math.random() * 3 + 7);
                 this.color = `hsl(${Math.random() * 360}, 100%, 65%)`;
                 this.exploded = false;
+
+                const s = rocketSound.cloneNode();
+                s.volume = 0.2;
+                s.play();
             }
 
             draw() {
@@ -147,6 +163,8 @@
             }
 
             explode() {
+                playBlastSound(this.x, this.y);
+
                 const particleCount = 80;
                 for (let i = 0; i < particleCount; i++) {
                     particles.push(new Particle(this.x, this.y, this.color));
